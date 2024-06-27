@@ -1,33 +1,34 @@
+ 
+// server.js
+
 const express = require('express');
-const bodyParser = require('body-parser');
-const http = require('http');
-const WebSocket = require('ws');
-const userRoutes = require('./routes/userRoutes');
+const sqlite3 = require('sqlite3').verbose();
 
 const app = express();
-app.use(bodyParser.json());
-app.use('/api', userRoutes);
+const port = process.env.PORT || 5000; // Use the port provided by Railway or default to 5000
 
-const server = http.createServer(app);
-const wss = new WebSocket.Server({ server });
+// SQLite setup
+const db = new sqlite3.Database(':memory:'); // In-memory database for demo purposes
 
-wss.on('connection', (ws) => {
-  ws.on('message', (message) => {
-    const parsedMessage = JSON.parse(message);
-    const broadcastMessage = JSON.stringify({
-      text: parsedMessage.text,
-      timestamp: new Date(),
-      sender: parsedMessage.sender
-    });
-    wss.clients.forEach(client => {
-      if (client !== ws && client.readyState === WebSocket.OPEN) {
-        client.send(broadcastMessage);
-      }
-    });
-  });
+// Create a users table
+db.serialize(() => {
+  db.run(`CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL,
+    password TEXT NOT NULL,
+    email TEXT NOT NULL
+  )`);
 });
 
-const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+// Express middleware
+app.use(express.json());
+
+// Routes
+app.get('/', (req, res) => {
+  res.send('Server is running');
+});
+
+// Start server
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
 });
